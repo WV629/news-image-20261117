@@ -23,7 +23,11 @@ import sys
 
 # The gate takes a whole PNG or JPEG of at most 1 MiB and 1024 by
 # 1024 pixels; entry.png is 1024x1024 and well under the size cap.
+# A PNG is told apart by its first bytes, so check the signature
+# before handing the copy over: a truncated or non-PNG file would
+# fail the gate outright, and catching it here costs nothing.
 MAX_BYTES = 1048576
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def main():
@@ -32,6 +36,11 @@ def main():
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     os.makedirs(out_dir, exist_ok=True)
     dst = os.path.join(out_dir, "entry.png")
+    with open(src, "rb") as f:
+        head = f.read(len(PNG_SIGNATURE))
+    if head != PNG_SIGNATURE:
+        print("error: entry.png is not a PNG file", file=sys.stderr)
+        return 1
     shutil.copyfile(src, dst)
     size = os.path.getsize(dst)
     print("wrote {} ({} bytes)".format(dst, size))
